@@ -25,6 +25,8 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 
+import es.ipb.excelfusion.config.ImportConfiguration;
+
 
 /**
  * Step 3 of the wizard:
@@ -42,9 +44,6 @@ public class Step3StructureValidationPage implements WizardPage
 
 	private Composite							   control;
 
-	private final Step1FileSelectionPage		   step1Page;
-	private final Step2PreviewPage				   step2Page;
-
 	private Label								   infoLabel;
 	private Table								   resultTable;
 	private Button								   importOnlyMatchingCheckbox;
@@ -58,10 +57,11 @@ public class Step3StructureValidationPage implements WizardPage
 	private Color								   okColor;
 	private Color								   errorColor;
 
-	public Step3StructureValidationPage (Step1FileSelectionPage step1Page, Step2PreviewPage step2Page)
+	private ImportConfiguration					   config;
+
+	public Step3StructureValidationPage (ImportConfiguration config)
 	{
-		this.step1Page = step1Page;
-		this.step2Page = step2Page;
+		this.config = config;
 	}
 
 	@Override
@@ -163,7 +163,7 @@ public class Step3StructureValidationPage implements WizardPage
 		resultTable.removeAll ();
 		hasMismatchesOrErrors = false;
 
-		Integer headerRow = step2Page.getHeaderRow (); // 1-based, null if none
+		Integer headerRow = config.getHeaderRow (); // 1-based, null if none
 		if (headerRow == null || headerRow <= 0)
 		{
 			// No header defined
@@ -178,7 +178,7 @@ public class Step3StructureValidationPage implements WizardPage
 
 		headerDefined = true;
 
-		java.util.List <File> selectedFiles = step1Page.getSelectedFiles ();
+		java.util.List <File> selectedFiles = config.getSelectedFiles ();
 		if (selectedFiles.isEmpty ())
 		{
 			infoLabel.setText ("No selected files found. Please go back and select at least one file.");

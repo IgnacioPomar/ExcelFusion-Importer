@@ -36,6 +36,8 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
+import es.ipb.excelfusion.config.ImportConfiguration;
+
 
 /**
  * Step 2 of the wizard:
@@ -50,8 +52,6 @@ public class Step2PreviewPage implements WizardPage
 	private static final int											 MAX_PREVIEW_ROWS	= 50;
 
 	private Composite													 control;
-
-	private final Step1FileSelectionPage								 step1Page;
 
 	private Combo														 sheetCombo;
 	private Label														 sheetInfoLabel;
@@ -71,9 +71,11 @@ public class Step2PreviewPage implements WizardPage
 
 	private Color														 highlightColor;
 
-	public Step2PreviewPage (Step1FileSelectionPage step1Page)
+	private ImportConfiguration											 config;
+
+	public Step2PreviewPage (ImportConfiguration config)
 	{
-		this.step1Page = step1Page;
+		this.config = config;
 	}
 
 	@Override
@@ -222,7 +224,7 @@ public class Step2PreviewPage implements WizardPage
 
 	private void initializeFromStep1 ()
 	{
-		java.util.List <File> selectedFiles = step1Page.getSelectedFiles ();
+		java.util.List <File> selectedFiles = config.getSelectedFiles ();
 		if (selectedFiles.isEmpty ())
 		{
 			showWarning ("No files selected", "Please go back and select at least one Excel file.");
@@ -507,6 +509,12 @@ public class Step2PreviewPage implements WizardPage
 				return false;
 			}
 		}
+
+		// Fill config
+		config.setHeaderRow (headerRow);
+		config.setDataStartRow (dataStartRow);
+		config.setAutoIncrement (autoIncrementCheckbox.getSelection ());
+		config.setFillEmptyCells (fillEmptyCheckbox.getSelection ());
 
 		// All good
 		return true;

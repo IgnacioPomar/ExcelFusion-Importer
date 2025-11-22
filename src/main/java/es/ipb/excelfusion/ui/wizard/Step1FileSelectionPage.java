@@ -31,6 +31,8 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
+import es.ipb.excelfusion.config.ImportConfiguration;
+
 
 /**
  * Step 1 of the wizard:
@@ -59,9 +61,11 @@ public class Step1FileSelectionPage implements WizardPage
 
 	private Color						grayColor;
 
-	public Step1FileSelectionPage ()
+	private ImportConfiguration			config;
+
+	public Step1FileSelectionPage (ImportConfiguration config)
 	{
-		// empty constructor for now
+		this.config = config;
 	}
 
 	@Override
@@ -381,6 +385,24 @@ public class Step1FileSelectionPage implements WizardPage
 			mb.open ();
 			return false;
 		}
+
+		// Make sure the fikes are accessible
+		for (File f : getSelectedFiles ())
+		{
+			if (!f.exists () || !f.canRead ())
+			{
+				MessageBox mb = new MessageBox (control.getShell (), SWT.ICON_ERROR | SWT.OK);
+				mb.setText ("File access error");
+				mb.setMessage ("The file \"" + f.getName () +
+				               "\" cannot be accessed. Please check that it exists and is readable.");
+				mb.open ();
+				return false;
+			}
+		}
+
+		config.setDataDirectory (currentDirectory);
+		config.setSelectedFiles (getSelectedFiles ());
+
 		return true;
 	}
 

@@ -4,6 +4,7 @@ package es.ipb.excelfusion;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
+import es.ipb.excelfusion.config.ImportConfiguration;
 import es.ipb.excelfusion.ui.wizard.Step1FileSelectionPage;
 import es.ipb.excelfusion.ui.wizard.Step2PreviewPage;
 import es.ipb.excelfusion.ui.wizard.Step3StructureValidationPage;
@@ -25,14 +26,16 @@ public class ExcelFusionApp
 		shell.setText ("ExcelFusion Importer");
 		shell.setSize (900, 700);
 
+		ImportConfiguration config = new ImportConfiguration ();
+
 		// Initialize WizardController here
 		es.ipb.excelfusion.ui.wizard.WizardController wizard = new es.ipb.excelfusion.ui.wizard.WizardController (
 		        shell);
-		Step1FileSelectionPage step1 = new Step1FileSelectionPage ();
-		Step2PreviewPage step2 = new Step2PreviewPage (step1);
-		Step3StructureValidationPage step3 = new Step3StructureValidationPage (step1, step2);
-		Step4TypeInferencePage step4 = new Step4TypeInferencePage (step1, step2, step3);
-		Step5DatabaseConfigPage step5 = new Step5DatabaseConfigPage ();
+		Step1FileSelectionPage step1 = new Step1FileSelectionPage (config);
+		Step2PreviewPage step2 = new Step2PreviewPage (config);
+		Step3StructureValidationPage step3 = new Step3StructureValidationPage (config);
+		Step4TypeInferencePage step4 = new Step4TypeInferencePage (config);
+		Step5DatabaseConfigPage step5 = new Step5DatabaseConfigPage (config);
 
 		wizard.addPage (step1);
 		wizard.addPage (step2);

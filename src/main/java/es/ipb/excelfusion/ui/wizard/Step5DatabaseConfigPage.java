@@ -18,6 +18,8 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Text;
 
+import es.ipb.excelfusion.config.ImportConfiguration;
+
 
 /**
  * Step 5 of the wizard:
@@ -34,23 +36,26 @@ public class Step5DatabaseConfigPage implements WizardPage
 		MARIADB, POSTGRESQL
 	}
 
-	private Composite control;
+	private Composite			control;
 
-	private Combo	  dbTypeCombo;
-	private Text	  hostText;
-	private Text	  portText;
-	private Text	  dbNameText;
-	private Text	  userText;
-	private Text	  passwordText;
-	private Button	  createDbIfMissingCheckbox;
-	private Button	  testConnectionButton;
-	private Label	  testResultLabel;
+	private Combo				dbTypeCombo;
+	private Text				hostText;
+	private Text				portText;
+	private Text				dbNameText;
+	private Text				userText;
+	private Text				passwordText;
+	private Button				createDbIfMissingCheckbox;
+	private Button				testConnectionButton;
+	private Label				testResultLabel;
 
 	// Cached values (optional, in case you want them later)
-	private DbType	  selectedDbType = DbType.MARIADB;
+	private DbType				selectedDbType = DbType.MARIADB;
 
-	public Step5DatabaseConfigPage ()
+	private ImportConfiguration	config;
+
+	public Step5DatabaseConfigPage (ImportConfiguration config)
 	{
+		this.config = config;
 	}
 
 	@Override
@@ -189,6 +194,16 @@ public class Step5DatabaseConfigPage implements WizardPage
 		{
 			return false;
 		}
+
+		// Save to ImportConfiguration
+		config.setDbType (getDbType ());
+		config.setDbHost (getHost ());
+		config.setDbPort (getPort ());
+		config.setDbName (getDatabaseName ());
+		config.setDbUser (getUser ());
+		config.setDbPassword (getPassword ());
+		config.setCreateDbIfMissing (isCreateDbIfMissing ());
+
 		return true;
 	}
 

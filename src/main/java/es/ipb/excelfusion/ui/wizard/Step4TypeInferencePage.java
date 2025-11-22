@@ -35,6 +35,7 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 
+import es.ipb.excelfusion.config.ImportConfiguration;
 import es.ipb.excelfusion.ui.wizard.Step3StructureValidationPage.SheetValidationResult;
 
 
@@ -95,27 +96,21 @@ public class Step4TypeInferencePage implements WizardPage
 		}
 	}
 
-	private final Step1FileSelectionPage	   step1Page;
-	private final Step2PreviewPage			   step2Page;
-	private final Step3StructureValidationPage step3Page;
+	private Composite						control;
+	private Table							columnTable;
+	private Combo							typeCombo;
+	private Button							applyTypeButton;
 
-	private Composite						   control;
-	private Table							   columnTable;
-	private Combo							   typeCombo;
-	private Button							   applyTypeButton;
+	private boolean							inferenceDone = false;
+	private boolean							headerDefined = false;
 
-	private boolean							   inferenceDone = false;
-	private boolean							   headerDefined = false;
+	private final List <ColumnDefinition>	columns		  = new ArrayList <> ();
+	private final Map <Integer, ColumnType>	typeByIndex	  = new HashMap <> ();
+	private ImportConfiguration				config;
 
-	private final List <ColumnDefinition>	   columns		 = new ArrayList <> ();
-	private final Map <Integer, ColumnType>	   typeByIndex	 = new HashMap <> ();
-
-	public Step4TypeInferencePage (Step1FileSelectionPage step1Page, Step2PreviewPage step2Page,
-	                               Step3StructureValidationPage step3Page)
+	public Step4TypeInferencePage (ImportConfiguration config)
 	{
-		this.step1Page = step1Page;
-		this.step2Page = step2Page;
-		this.step3Page = step3Page;
+		this.config = config;
 	}
 
 	@Override
@@ -236,8 +231,8 @@ public class Step4TypeInferencePage implements WizardPage
 		typeByIndex.clear ();
 		columnTable.removeAll ();
 
-		Integer headerRow = step2Page.getHeaderRow ();
-		Integer dataStartRow = step2Page.getDataStartRow (); // 1-based
+		Integer headerRow = config.getHeaderRow ();
+		Integer dataStartRow = config.getDataStartRow (); // 1-based
 		if (dataStartRow == null || dataStartRow <= 0)
 		{
 			showError ("Invalid configuration",
@@ -249,7 +244,7 @@ public class Step4TypeInferencePage implements WizardPage
 		int headerRowIndex = headerDefined? (headerRow - 1) : -1;
 		int dataStartIndex = dataStartRow - 1; // 0-based
 
-		List <SheetValidationResult> sheetsToImport = step3Page.getSheetsToImport ();
+		List <SheetValidationResult> sheetsToImport = config.getSheetsToImport ();
 		if (sheetsToImport.isEmpty ())
 		{
 			showError ("No sheets to import",
