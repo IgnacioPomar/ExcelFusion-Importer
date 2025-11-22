@@ -389,6 +389,11 @@ public class Step3StructureValidationPage implements WizardPage
 	public boolean onLeave ()
 	{
 		// No extra validation here; we just keep the results.
+
+		// fill the config with the sheets to import
+		config.getSheetsToImport ().clear ();
+		config.getSheetsToImport ().addAll (getSheetsToImport ());
+
 		return true;
 	}
 
