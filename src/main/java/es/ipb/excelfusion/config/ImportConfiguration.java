@@ -45,6 +45,7 @@ public class ImportConfiguration
 	private String						 dbUser;
 	private String						 dbPassword;
 	private boolean						 createDbIfMissing;
+	private String						 tableName;
 
 	// === Getters / Setters ===
 
@@ -216,5 +217,15 @@ public class ImportConfiguration
 	public void setCreateDbIfMissing (boolean createDbIfMissing)
 	{
 		this.createDbIfMissing = createDbIfMissing;
+	}
+
+	public void setTableName (String tableName)
+	{
+		this.tableName = tableName;
+	}
+
+	public String getTableName ()
+	{
+		return tableName;
 	}
 }

@@ -10,6 +10,7 @@ import es.ipb.excelfusion.ui.wizard.Step2PreviewPage;
 import es.ipb.excelfusion.ui.wizard.Step3StructureValidationPage;
 import es.ipb.excelfusion.ui.wizard.Step4TypeInferencePage;
 import es.ipb.excelfusion.ui.wizard.Step5DatabaseConfigPage;
+import es.ipb.excelfusion.ui.wizard.Step6ImportExecutionPage;
 
 
 public class ExcelFusionApp
@@ -36,12 +37,14 @@ public class ExcelFusionApp
 		Step3StructureValidationPage step3 = new Step3StructureValidationPage (config);
 		Step4TypeInferencePage step4 = new Step4TypeInferencePage (config);
 		Step5DatabaseConfigPage step5 = new Step5DatabaseConfigPage (config);
+		Step6ImportExecutionPage step6 = new Step6ImportExecutionPage (config);
 
 		wizard.addPage (step1);
 		wizard.addPage (step2);
 		wizard.addPage (step3);
 		wizard.addPage (step4);
 		wizard.addPage (step5);
+		wizard.addPage (step6);
 
 		shell.open ();
 		wizard.start ();

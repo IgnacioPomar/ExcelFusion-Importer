@@ -61,6 +61,7 @@ public class Step2PreviewPage implements WizardPage
 	private Text														 headerRowText;
 	private Text														 dataStartRowText;
 	private Text														 highlightColumnText;
+	private Text														 tableNameText;
 
 	private Button														 autoIncrementCheckbox;
 	private Button														 fillEmptyCheckbox;
@@ -101,6 +102,7 @@ public class Step2PreviewPage implements WizardPage
 		createTopSection (control);
 		createPreviewTable (control);
 		createOptionsSection (control);
+		createTableNameSection (control);
 	}
 
 	private void createTopSection (Composite parent)
@@ -174,6 +176,20 @@ public class Step2PreviewPage implements WizardPage
 		control.setData ("fileNameLabel", fileNameLabel);
 	}
 
+	private void createTableNameSection (Composite parent)
+	{
+		Group group = new Group (parent, SWT.NONE);
+		group.setText ("Target table");
+		group.setLayoutData (new GridData (SWT.FILL, SWT.TOP, true, false));
+		group.setLayout (new GridLayout (2, false));
+
+		Label label = new Label (group, SWT.NONE);
+		label.setText ("Table name:");
+
+		tableNameText = new Text (group, SWT.BORDER);
+		tableNameText.setLayoutData (new GridData (SWT.FILL, SWT.CENTER, true, false));
+	}
+
 	private void createPreviewTable (Composite parent)
 	{
 		Group group = new Group (parent, SWT.NONE);
@@ -218,11 +234,22 @@ public class Step2PreviewPage implements WizardPage
 		// Called when the page becomes visible
 		if (selectedFile == null)
 		{
-			initializeFromStep1 ();
+			initializeFromConfig ();
 		}
+
+		// Rellenar nombre de tabla desde config si ya existe
+		if (tableNameText != null && !tableNameText.isDisposed ())
+		{
+			String tableName = config.getTableName ();
+			if (tableName != null && !tableName.isBlank ())
+			{
+				tableNameText.setText (tableName);
+			}
+		}
+
 	}
 
-	private void initializeFromStep1 ()
+	private void initializeFromConfig ()
 	{
 		java.util.List <File> selectedFiles = config.getSelectedFiles ();
 		if (selectedFiles.isEmpty ())
@@ -510,11 +537,21 @@ public class Step2PreviewPage implements WizardPage
 			}
 		}
 
+		String tableName = (tableNameText != null)? tableNameText.getText ().trim () : "";
+		if (tableName.isEmpty ())
+		{
+			showError ("Invalid table name", "You must specify a table name before continuing.");
+			return false;
+		}
+
 		// Fill config
 		config.setHeaderRow (headerRow);
 		config.setDataStartRow (dataStartRow);
 		config.setAutoIncrement (autoIncrementCheckbox.getSelection ());
 		config.setFillEmptyCells (fillEmptyCheckbox.getSelection ());
+
+		// config.setSheetNames(getSheetNames()); // si quieres guardar esto también
+		config.setTableName (tableName);
 
 		// All good
 		return true;
