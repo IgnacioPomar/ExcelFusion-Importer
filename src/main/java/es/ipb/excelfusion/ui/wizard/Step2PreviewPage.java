@@ -5,8 +5,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -43,36 +43,37 @@ import es.ipb.excelfusion.config.ImportConfiguration;
  * Step 2 of the wizard:
  * - Preview the selected Excel file (first selected from step 1)
  * - Choose header row and data start row
- * - Highlight columns by name
- * - Configure options (auto-increment, fill empty cells)
+ * - Configure auto-increment / fill-empty options
+ * - Set target table name
+ * - Highlight the header row (if defined) in the preview
  */
 public class Step2PreviewPage implements WizardPage
 {
 
-	private static final int											 MAX_PREVIEW_ROWS	= 50;
+	private static final int						 MAX_PREVIEW_ROWS	= 500;
 
-	private Composite													 control;
+	private Composite								 control;
 
-	private Combo														 sheetCombo;
-	private Label														 sheetInfoLabel;
+	private final ImportConfiguration				 config;
 
-	private Table														 previewTable;
+	private Combo									 sheetCombo;
+	private Label									 sheetInfoLabel;
 
-	private Text														 headerRowText;
-	private Text														 dataStartRowText;
-	private Text														 highlightColumnText;
-	private Text														 tableNameText;
+	private Table									 previewTable;
 
-	private Button														 autoIncrementCheckbox;
-	private Button														 fillEmptyCheckbox;
+	private Text									 headerRowText;
+	private Text									 dataStartRowText;
 
-	private File														 selectedFile;
-	private final Map <String, java.util.List <java.util.List <String>>> previewDataBySheet	= new LinkedHashMap <> ();
-	private final java.util.List <String>								 sheetNames			= new ArrayList <> ();
+	private Button									 autoIncrementCheckbox;
+	private Button									 fillEmptyCheckbox;
 
-	private Color														 highlightColor;
+	private Text									 tableNameText;
 
-	private ImportConfiguration											 config;
+	private File									 selectedFile;
+	private final Map <String, List <List <String>>> previewDataBySheet	= new LinkedHashMap <> ();
+	private final List <String>						 sheetNames			= new ArrayList <> ();
+
+	private Color									 highlightColor;
 
 	public Step2PreviewPage (ImportConfiguration config)
 	{
@@ -137,10 +138,13 @@ public class Step2PreviewPage implements WizardPage
 		sheetInfoLabel.setLayoutData (new GridData (SWT.FILL, SWT.CENTER, true, false));
 		sheetInfoLabel.setText ("");
 
+		// Save reference to file name label for later
+		control.setData ("fileNameLabel", fileNameLabel);
+
 		// Second row: header & data start
 		Composite rowConfig = new Composite (parent, SWT.NONE);
 		rowConfig.setLayoutData (new GridData (SWT.FILL, SWT.TOP, true, false));
-		GridLayout gl2 = new GridLayout (6, false);
+		GridLayout gl2 = new GridLayout (4, false);
 		gl2.marginWidth = 0;
 		gl2.horizontalSpacing = 10;
 		rowConfig.setLayout (gl2);
@@ -158,36 +162,15 @@ public class Step2PreviewPage implements WizardPage
 		dataStartRowText = new Text (rowConfig, SWT.BORDER);
 		dataStartRowText.setLayoutData (new GridData (60, SWT.DEFAULT));
 
-		Label highlightLabel = new Label (rowConfig, SWT.NONE);
-		highlightLabel.setText ("Highlight column (by name):");
-
-		highlightColumnText = new Text (rowConfig, SWT.BORDER);
-		highlightColumnText.setLayoutData (new GridData (150, SWT.DEFAULT));
-		highlightColumnText.addModifyListener (new ModifyListener ()
+		// highlight header row when headerRowText changes
+		headerRowText.addModifyListener (new ModifyListener ()
 		{
 			@Override
 			public void modifyText (ModifyEvent e)
 			{
-				applyColumnHighlight ();
+				applyHeaderHighlight ();
 			}
 		});
-
-		// Save reference to file name label for later
-		control.setData ("fileNameLabel", fileNameLabel);
-	}
-
-	private void createTableNameSection (Composite parent)
-	{
-		Group group = new Group (parent, SWT.NONE);
-		group.setText ("Target table");
-		group.setLayoutData (new GridData (SWT.FILL, SWT.TOP, true, false));
-		group.setLayout (new GridLayout (2, false));
-
-		Label label = new Label (group, SWT.NONE);
-		label.setText ("Table name:");
-
-		tableNameText = new Text (group, SWT.BORDER);
-		tableNameText.setLayoutData (new GridData (SWT.FILL, SWT.CENTER, true, false));
 	}
 
 	private void createPreviewTable (Composite parent)
@@ -222,6 +205,20 @@ public class Step2PreviewPage implements WizardPage
 		fillEmptyCheckbox.setSelection (true);
 	}
 
+	private void createTableNameSection (Composite parent)
+	{
+		Group group = new Group (parent, SWT.NONE);
+		group.setText ("Target table");
+		group.setLayoutData (new GridData (SWT.FILL, SWT.TOP, true, false));
+		group.setLayout (new GridLayout (2, false));
+
+		Label label = new Label (group, SWT.NONE);
+		label.setText ("Table name:");
+
+		tableNameText = new Text (group, SWT.BORDER);
+		tableNameText.setLayoutData (new GridData (SWT.FILL, SWT.CENTER, true, false));
+	}
+
 	@Override
 	public Composite getControl ()
 	{
@@ -231,13 +228,12 @@ public class Step2PreviewPage implements WizardPage
 	@Override
 	public void onEnter ()
 	{
-		// Called when the page becomes visible
 		if (selectedFile == null)
 		{
-			initializeFromConfig ();
+			initializeFromStep1 ();
 		}
 
-		// Rellenar nombre de tabla desde config si ya existe
+		// Rellenar nombre de tabla desde config si existiera
 		if (tableNameText != null && !tableNameText.isDisposed ())
 		{
 			String tableName = config.getTableName ();
@@ -247,11 +243,33 @@ public class Step2PreviewPage implements WizardPage
 			}
 		}
 
+		// Rellenar header/data row si ya estaban
+		if (headerRowText != null && !headerRowText.isDisposed ())
+		{
+			Integer hr = config.getHeaderRow ();
+			headerRowText.setText (hr != null && hr > 0? String.valueOf (hr) : "");
+		}
+		if (dataStartRowText != null && !dataStartRowText.isDisposed ())
+		{
+			Integer ds = config.getDataStartRow ();
+			dataStartRowText.setText (ds != null && ds > 0? String.valueOf (ds) : "");
+		}
+
+		if (autoIncrementCheckbox != null && !autoIncrementCheckbox.isDisposed ())
+		{
+			autoIncrementCheckbox.setSelection (config.isAutoIncrement ());
+		}
+		if (fillEmptyCheckbox != null && !fillEmptyCheckbox.isDisposed ())
+		{
+			fillEmptyCheckbox.setSelection (config.isFillEmptyCells ());
+		}
+
+		applyHeaderHighlight ();
 	}
 
-	private void initializeFromConfig ()
+	private void initializeFromStep1 ()
 	{
-		java.util.List <File> selectedFiles = config.getSelectedFiles ();
+		List <File> selectedFiles = config.getSelectedFiles ();
 		if (selectedFiles.isEmpty ())
 		{
 			showWarning ("No files selected", "Please go back and select at least one Excel file.");
@@ -289,26 +307,28 @@ public class Step2PreviewPage implements WizardPage
 				String sheetName = sheet.getSheetName ();
 				sheetNames.add (sheetName);
 
-				java.util.List <java.util.List <String>> rows = new ArrayList <> ();
+				List <List <String>> rows = new ArrayList <> ();
 
 				int maxRow = Math.min (sheet.getLastRowNum (), MAX_PREVIEW_ROWS - 1);
+				DataFormatter formatter = new DataFormatter (Locale.getDefault ());
+
 				for (int r = 0; r <= maxRow; r++)
 				{
 					Row row = sheet.getRow (r);
 					if (row == null)
 					{
-						rows.add (Collections.emptyList ());
+						rows.add (new ArrayList <> ());
 						continue;
 					}
 
 					int lastCellNum = row.getLastCellNum ();
 					if (lastCellNum < 0)
 					{
-						rows.add (Collections.emptyList ());
+						rows.add (new ArrayList <> ());
 						continue;
 					}
 
-					java.util.List <String> values = new ArrayList <> ();
+					List <String> values = new ArrayList <> ();
 					for (int c = 0; c < lastCellNum; c++)
 					{
 						Cell cell = row.getCell (c, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
@@ -318,7 +338,7 @@ public class Step2PreviewPage implements WizardPage
 						}
 						else
 						{
-							values.add (getCellStringValue (cell));
+							values.add (formatter.formatCellValue (cell));
 						}
 					}
 					rows.add (values);
@@ -340,12 +360,6 @@ public class Step2PreviewPage implements WizardPage
 			showError ("Error reading Excel file",
 			           "Unexpected error while reading file:\n" + file.getAbsolutePath () + "\n\n" + e.getMessage ());
 		}
-	}
-
-	private String getCellStringValue (Cell cell)
-	{
-		DataFormatter formatter = new DataFormatter (Locale.getDefault ());
-		return formatter.formatCellValue (cell);
 	}
 
 	private void populateSheetCombo ()
@@ -377,7 +391,7 @@ public class Step2PreviewPage implements WizardPage
 		String selectedName;
 		if (index == 0)
 		{
-			// "All sheets" -> show first sheet only for preview
+			// "All sheets" -> preview uses first sheet
 			if (sheetNames.isEmpty ())
 			{
 				return;
@@ -389,13 +403,12 @@ public class Step2PreviewPage implements WizardPage
 			selectedName = sheetCombo.getItem (index);
 		}
 
-		java.util.List <java.util.List <String>> rows = previewDataBySheet.getOrDefault (selectedName,
-		                                                                                 Collections.emptyList ());
+		List <List <String>> rows = previewDataBySheet.getOrDefault (selectedName, new ArrayList <> ());
 		refreshPreviewTable (rows);
-		applyColumnHighlight ();
+		applyHeaderHighlight ();
 	}
 
-	private void refreshPreviewTable (java.util.List <java.util.List <String>> rows)
+	private void refreshPreviewTable (List <List <String>> rows)
 	{
 		previewTable.removeAll ();
 		for (TableColumn col : previewTable.getColumns ())
@@ -403,44 +416,52 @@ public class Step2PreviewPage implements WizardPage
 			col.dispose ();
 		}
 
+		// Determine max number of data columns
 		int maxColumns = 0;
-		for (java.util.List <String> row : rows)
+		for (List <String> row : rows)
 		{
 			maxColumns = Math.max (maxColumns, row.size ());
 		}
 
-		// Create columns
+		// Columna 0: número de fila
+		TableColumn rowNumCol = new TableColumn (previewTable, SWT.RIGHT);
+		rowNumCol.setText ("#");
+		rowNumCol.setWidth (50);
+
+		// Crear columnas A, B, C, ...
 		for (int c = 0; c < maxColumns; c++)
 		{
 			TableColumn column = new TableColumn (previewTable, SWT.LEFT);
-			// header row might later be overridden when user sets headerRowText,
-			// for now use generic names
-			column.setText ("Col " + (c + 1));
+			column.setText (indexToColumnName (c));
 			column.setWidth (120);
 		}
 
-		// Fill rows
-		for (java.util.List <String> rowData : rows)
+		// Rellenar filas
+		for (int r = 0; r < rows.size (); r++)
 		{
+			List <String> rowData = rows.get (r);
 			TableItem item = new TableItem (previewTable, SWT.NONE);
+
+			// columna 0 → número de fila Excel (1-based)
+			item.setText (0, String.valueOf (r + 1));
+
 			for (int c = 0; c < rowData.size (); c++)
 			{
-				item.setText (c, rowData.get (c));
+				item.setText (c + 1, rowData.get (c)); // +1 por la columna de número de fila
 			}
 		}
 
 		previewTable.layout ();
 	}
 
-	private void applyColumnHighlight ()
+	private void applyHeaderHighlight ()
 	{
-		if (previewTable.isDisposed ())
+		if (previewTable == null || previewTable.isDisposed ())
 		{
 			return;
 		}
 
-		String pattern = highlightColumnText.getText ().trim ().toLowerCase (Locale.ROOT);
-		// reset all background colors
+		// Resetear colores
 		for (TableItem item : previewTable.getItems ())
 		{
 			for (int c = 0; c < previewTable.getColumnCount (); c++)
@@ -449,44 +470,17 @@ public class Step2PreviewPage implements WizardPage
 			}
 		}
 
-		if (pattern.isEmpty ())
-		{
-			return;
-		}
-
-		// Determine header row index (0-based) if any
 		int headerIndex = getHeaderRowIndexInternal ();
 		if (headerIndex < 0 || headerIndex >= previewTable.getItemCount ())
 		{
 			return;
 		}
 
+		// Pintamos TODA la fila header con el color de highlight
 		TableItem headerItem = previewTable.getItem (headerIndex);
-		java.util.List <Integer> matchingColumns = new ArrayList <> ();
-
 		for (int c = 0; c < previewTable.getColumnCount (); c++)
 		{
-			String headerValue = headerItem.getText (c).toLowerCase (Locale.ROOT);
-			if (headerValue.contains (pattern))
-			{
-				matchingColumns.add (c);
-			}
-		}
-
-		if (matchingColumns.isEmpty ())
-		{
-			return;
-		}
-
-		for (TableItem item : previewTable.getItems ())
-		{
-			for (Integer colIndex : matchingColumns)
-			{
-				if (colIndex < previewTable.getColumnCount ())
-				{
-					item.setBackground (colIndex, highlightColor);
-				}
-			}
+			headerItem.setBackground (c, highlightColor);
 		}
 	}
 
@@ -504,57 +498,13 @@ public class Step2PreviewPage implements WizardPage
 			{
 				return -1;
 			}
-			// Excel-style is 1-based, table rows are 0-based
+			// Excel-style 1-based → table index 0-based
 			return rowNumber - 1;
 		}
 		catch (NumberFormatException e)
 		{
 			return -1;
 		}
-	}
-
-	@Override
-	public boolean onLeave ()
-	{
-		// Validate header / data row numbers
-		Integer headerRow = parseOptionalRowNumber (headerRowText.getText ().trim ());
-		Integer dataStartRow = parseRequiredRowNumber (dataStartRowText.getText ().trim (), "Data start row");
-
-		if (dataStartRow == null)
-		{
-			return false;
-		}
-
-		if (headerRow != null && headerRow > 0)
-		{
-			if (dataStartRow <= headerRow)
-			{
-				showError ("Invalid row configuration",
-				           "Data start row must be greater than header row.\n\n" + "Current values:\n" +
-				                                        "Header row: " + headerRow + "\n" + "Data start row: " +
-				                                        dataStartRow);
-				return false;
-			}
-		}
-
-		String tableName = (tableNameText != null)? tableNameText.getText ().trim () : "";
-		if (tableName.isEmpty ())
-		{
-			showError ("Invalid table name", "You must specify a table name before continuing.");
-			return false;
-		}
-
-		// Fill config
-		config.setHeaderRow (headerRow);
-		config.setDataStartRow (dataStartRow);
-		config.setAutoIncrement (autoIncrementCheckbox.getSelection ());
-		config.setFillEmptyCells (fillEmptyCheckbox.getSelection ());
-
-		// config.setSheetNames(getSheetNames()); // si quieres guardar esto también
-		config.setTableName (tableName);
-
-		// All good
-		return true;
 	}
 
 	private Integer parseOptionalRowNumber (String text)
@@ -605,9 +555,50 @@ public class Step2PreviewPage implements WizardPage
 	}
 
 	@Override
+	public boolean onLeave ()
+	{
+		Integer headerRow = parseOptionalRowNumber (headerRowText.getText ().trim ());
+		Integer dataStartRow = parseRequiredRowNumber (dataStartRowText.getText ().trim (), "Data start row");
+
+		if (dataStartRow == null)
+		{
+			return false;
+		}
+
+		if (headerRow != null && headerRow > 0)
+		{
+			if (dataStartRow <= headerRow)
+			{
+				showError ("Invalid row configuration",
+				           "Data start row must be greater than header row.\n\n" + "Current values:\n" +
+				                                        "Header row: " + headerRow + "\n" + "Data start row: " +
+				                                        dataStartRow);
+				return false;
+			}
+		}
+
+		String tableName = (tableNameText != null)? tableNameText.getText ().trim () : "";
+		if (tableName.isEmpty ())
+		{
+			showError ("Invalid table name", "You must specify a table name before continuing.");
+			return false;
+		}
+
+		// Guardar en configuración común
+		config.setHeaderRow (headerRow);
+		config.setDataStartRow (dataStartRow);
+		config.setAutoIncrement (autoIncrementCheckbox.getSelection ());
+		config.setFillEmptyCells (fillEmptyCheckbox.getSelection ());
+		config.setSheetNames (new ArrayList <> (sheetNames));
+		config.setTableName (tableName);
+
+		return true;
+	}
+
+	@Override
 	public boolean canGoNext ()
 	{
-		// Permit Next, real validation occurs in onLeave()
+		// Validación real se hace en onLeave()
 		return true;
 	}
 
@@ -633,22 +624,16 @@ public class Step2PreviewPage implements WizardPage
 		mb.open ();
 	}
 
-	// === Public getters for later steps ===
+	// === Public getters (si los sigues usando en otros steps) ===
 
-	/**
-	 * @return null if no header row defined; otherwise header row (1-based, Excel-style).
-	 */
 	public Integer getHeaderRow ()
 	{
-		return parseOptionalRowNumber (headerRowText.getText ().trim ());
+		return config.getHeaderRow ();
 	}
 
-	/**
-	 * @return data start row (1-based).
-	 */
 	public Integer getDataStartRow ()
 	{
-		return parseRequiredRowNumber (dataStartRowText.getText ().trim (), "Data start row");
+		return config.getDataStartRow ();
 	}
 
 	public boolean isAutoIncrementEnabled ()
@@ -666,8 +651,24 @@ public class Step2PreviewPage implements WizardPage
 		return selectedFile;
 	}
 
-	public java.util.List <String> getSheetNames ()
+	public List <String> getSheetNames ()
 	{
 		return new ArrayList <> (sheetNames);
+	}
+
+	// === Helpers ===
+
+	private String indexToColumnName (int index)
+	{
+		// 0 -> A, 25 -> Z, 26 -> AA, etc.
+		StringBuilder sb = new StringBuilder ();
+		int x = index;
+		while (x >= 0)
+		{
+			int remainder = x % 26;
+			sb.insert (0, (char) ('A' + remainder));
+			x = (x / 26) - 1;
+		}
+		return sb.toString ();
 	}
 }
