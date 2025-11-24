@@ -796,7 +796,8 @@ public class Step4TypeInferencePage implements WizardPage
 	@Override
 	public boolean onLeave ()
 	{
-		// Nothing special to validate here; user is allowed to keep inferred types as-is.
+		config.setColumns (new ArrayList <> (columns));
+		config.setColumnTypesByIndex (new HashMap <> (typeByIndex));
 		return true;
 	}
 
