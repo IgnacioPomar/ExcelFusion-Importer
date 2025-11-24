@@ -1,9 +1,14 @@
 
 package es.ipb.excelfusion.ui.wizard;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -183,7 +188,16 @@ public class Step5DatabaseConfigPage implements WizardPage
 	@Override
 	public void onEnter ()
 	{
-		// In a later iteration we could load config from a per-directory file here.
+
+		File dataDir = config.getDataDirectory ();
+		if (dataDir != null)
+		{
+			File confFile = new File (dataDir, "db_config.properties");
+			if (confFile.exists ())
+			{
+				loadConfigFromFile (confFile);
+			}
+		}
 	}
 
 	@Override
@@ -193,6 +207,13 @@ public class Step5DatabaseConfigPage implements WizardPage
 		if (!validateConfig (false))
 		{
 			return false;
+		}
+
+		File dataDir = config.getDataDirectory ();
+		if (dataDir != null)
+		{
+			File confFile = new File (dataDir, "db_config.properties");
+			saveConfigToFile (confFile);
 		}
 
 		// Save to ImportConfiguration
@@ -205,6 +226,65 @@ public class Step5DatabaseConfigPage implements WizardPage
 		config.setCreateDbIfMissing (isCreateDbIfMissing ());
 
 		return true;
+	}
+
+	private void loadConfigFromFile (File confFile)
+	{
+		Properties props = new Properties ();
+		try (FileInputStream fis = new FileInputStream (confFile))
+		{
+			props.load (fis);
+		}
+		catch (IOException e)
+		{
+			showInfo ("DB config", "Could not load DB config file '" + confFile.getName () + "':\n" + e.getMessage ());
+			return;
+		}
+
+		String typeStr = props.getProperty ("dbType");
+		if ("POSTGRESQL".equalsIgnoreCase (typeStr))
+		{
+			dbTypeCombo.select (1);
+		}
+		else if ("MARIADB".equalsIgnoreCase (typeStr))
+		{
+			dbTypeCombo.select (0);
+		}
+
+		if (props.getProperty ("host") != null) hostText.setText (props.getProperty ("host"));
+
+		if (props.getProperty ("port") != null) portText.setText (props.getProperty ("port"));
+
+		if (props.getProperty ("dbName") != null) dbNameText.setText (props.getProperty ("dbName"));
+
+		if (props.getProperty ("user") != null) userText.setText (props.getProperty ("user"));
+
+		if (props.getProperty ("password") != null) passwordText.setText (props.getProperty ("password"));
+
+		if (props.getProperty ("createDbIfMissing") != null)
+		    createDbIfMissingCheckbox.setSelection (Boolean.parseBoolean (props.getProperty ("createDbIfMissing")));
+	}
+
+	private void saveConfigToFile (File confFile)
+	{
+		Properties props = new Properties ();
+
+		props.setProperty ("dbType", getDbType ().name ());
+		props.setProperty ("host", hostText.getText ().trim ());
+		props.setProperty ("port", portText.getText ().trim ());
+		props.setProperty ("dbName", dbNameText.getText ().trim ());
+		props.setProperty ("user", userText.getText ().trim ());
+		props.setProperty ("password", passwordText.getText ());
+		props.setProperty ("createDbIfMissing", String.valueOf (createDbIfMissingCheckbox.getSelection ()));
+
+		try (FileOutputStream fos = new FileOutputStream (confFile))
+		{
+			props.store (fos, "ExcelFusion - database configuration");
+		}
+		catch (IOException e)
+		{
+			showInfo ("DB config", "Could not save DB config file '" + confFile.getName () + "':\n" + e.getMessage ());
+		}
 	}
 
 	@Override
