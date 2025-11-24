@@ -32,7 +32,7 @@ public class ExcelFusionApp
 		// Initialize WizardController here
 		es.ipb.excelfusion.ui.wizard.WizardController wizard = new es.ipb.excelfusion.ui.wizard.WizardController (
 		        shell);
-		Step1FileSelectionPage step1 = new Step1FileSelectionPage (config);
+		Step1FileSelectionPage step1 = new Step1FileSelectionPage (config, wizard);
 		Step2PreviewPage step2 = new Step2PreviewPage (config);
 		Step3StructureValidationPage step3 = new Step3StructureValidationPage (config);
 		Step4TypeInferencePage step4 = new Step4TypeInferencePage (config);

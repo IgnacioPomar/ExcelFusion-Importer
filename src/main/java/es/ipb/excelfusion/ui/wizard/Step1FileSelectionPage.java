@@ -62,10 +62,12 @@ public class Step1FileSelectionPage implements WizardPage
 	private Color						grayColor;
 
 	private ImportConfiguration			config;
+	private final WizardController		wizardController;
 
-	public Step1FileSelectionPage (ImportConfiguration config)
+	public Step1FileSelectionPage (ImportConfiguration config, WizardController wizardController)
 	{
 		this.config = config;
+		this.wizardController = wizardController;
 	}
 
 	@Override
@@ -358,6 +360,13 @@ public class Step1FileSelectionPage implements WizardPage
 				}
 			}
 		}
+
+		// refrescar botones del wizard
+		if (wizardController != null)
+		{
+			wizardController.refreshButtons ();
+		}
+
 	}
 
 	@Override

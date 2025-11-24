@@ -236,6 +236,12 @@ public class WizardController
 
 		buttonBar.layout ();
 	}
+
+	public void refreshButtons ()
+	{
+		updateButtonState ();
+
+	}
 }
 
 
