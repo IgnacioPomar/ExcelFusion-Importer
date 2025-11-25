@@ -27,7 +27,7 @@ public class ImportConfiguration
 	private Integer						 headerRow;							  // null or >= 1
 	private Integer						 dataStartRow;						  // always >= 1
 	private boolean						 autoIncrement;
-	private boolean						 fillEmptyCells;
+	private List <Boolean>				 fillEmptyColumns;
 	private List <String>				 sheetNames		= new ArrayList <> ();
 
 	// === Step 3 ===
@@ -97,16 +97,6 @@ public class ImportConfiguration
 	public void setAutoIncrement (boolean autoIncrement)
 	{
 		this.autoIncrement = autoIncrement;
-	}
-
-	public boolean isFillEmptyCells ()
-	{
-		return fillEmptyCells;
-	}
-
-	public void setFillEmptyCells (boolean fillEmptyCells)
-	{
-		this.fillEmptyCells = fillEmptyCells;
 	}
 
 	public List <String> getSheetNames ()
@@ -227,5 +217,11 @@ public class ImportConfiguration
 	public String getTableName ()
 	{
 		return tableName;
+	}
+
+	public void setFillEmptyColumns (List <Boolean> fillColumnList)
+	{
+		this.fillEmptyColumns = fillColumnList;
+
 	}
 }

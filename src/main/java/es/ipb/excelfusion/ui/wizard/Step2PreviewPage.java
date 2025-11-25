@@ -1,3 +1,4 @@
+
 package es.ipb.excelfusion.ui.wizard;
 
 import java.io.File;
@@ -21,6 +22,8 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.layout.RowLayout;
@@ -64,7 +67,6 @@ public class Step2PreviewPage implements WizardPage
 	private Text									 dataStartRowText;
 
 	private Button									 autoIncrementCheckbox;
-	private Button									 fillEmptyCheckbox;
 
 	private Text									 tableNameText;
 
@@ -73,6 +75,9 @@ public class Step2PreviewPage implements WizardPage
 	private final List <String>						 sheetNames			= new ArrayList <> ();
 
 	private Color									 highlightColor;
+	private Color									 nonDataColor;
+
+	private boolean[]								 fillEmptyPerColumn;
 
 	public Step2PreviewPage (ImportConfiguration config)
 	{
@@ -98,6 +103,7 @@ public class Step2PreviewPage implements WizardPage
 		control.setLayout (new GridLayout (1, false));
 
 		highlightColor = parent.getDisplay ().getSystemColor (SWT.COLOR_YELLOW);
+		nonDataColor = parent.getDisplay ().getSystemColor (SWT.COLOR_WIDGET_LIGHT_SHADOW);
 
 		createTopSection (control);
 		createPreviewTable (control);
@@ -182,6 +188,32 @@ public class Step2PreviewPage implements WizardPage
 		previewTable = new Table (group, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
 		previewTable.setHeaderVisible (true);
 		previewTable.setLinesVisible (true);
+		previewTable.addListener (SWT.MouseDown, event -> {
+			Point pt = new Point (event.x, event.y);
+			TableItem item = previewTable.getItem (pt);
+			if (item == null)
+			{
+				return;
+			}
+
+			int rowIndex = previewTable.indexOf (item);
+			// Solo la fila 0 es la "prefila" de checkboxes
+			if (rowIndex != 0)
+			{
+				return;
+			}
+
+			int columnCount = previewTable.getColumnCount ();
+			for (int c = 1; c < columnCount; c++) // desde la 1: la 0 es "#"
+			{
+				Rectangle rect = item.getBounds (c);
+				if (rect.contains (pt))
+				{
+					toggleFillEmptyForColumn (c - 1); // columnas de datos empiezan en 0
+					break;
+				}
+			}
+		});
 
 		GridData gd = new GridData (SWT.FILL, SWT.FILL, true, true);
 		gd.heightHint = 350;
@@ -199,9 +231,6 @@ public class Step2PreviewPage implements WizardPage
 		autoIncrementCheckbox.setText ("Add auto-increment column (ID)");
 		autoIncrementCheckbox.setSelection (true);
 
-		fillEmptyCheckbox = new Button (group, SWT.CHECK);
-		fillEmptyCheckbox.setText ("Fill empty cells with previous row value");
-		fillEmptyCheckbox.setSelection (true);
 	}
 
 	private void createTableNameSection (Composite parent)
@@ -254,10 +283,6 @@ public class Step2PreviewPage implements WizardPage
 		if (autoIncrementCheckbox != null && !autoIncrementCheckbox.isDisposed ())
 		{
 			autoIncrementCheckbox.setSelection (config.isAutoIncrement ());
-		}
-		if (fillEmptyCheckbox != null && !fillEmptyCheckbox.isDisposed ())
-		{
-			fillEmptyCheckbox.setSelection (config.isFillEmptyCells ());
 		}
 
 		applyHeaderHighlight ();
@@ -412,7 +437,7 @@ public class Step2PreviewPage implements WizardPage
 			col.dispose ();
 		}
 
-		// Determine max number of data columns
+		// Determinar número máximo de columnas de datos
 		int maxColumns = 0;
 		for (List <String> row : rows)
 		{
@@ -432,18 +457,68 @@ public class Step2PreviewPage implements WizardPage
 			column.setWidth (120);
 		}
 
-		// Rellenar filas
+		// Fondo de cabecera (no es parte de los datos)
+		if (nonDataColor != null)
+		{
+			previewTable.setHeaderBackground (nonDataColor);
+		}
+
+		// Inicializar configuración por columnas para "fill empty"
+		if (maxColumns > 0)
+		{
+			if (fillEmptyPerColumn == null || fillEmptyPerColumn.length != maxColumns)
+			{
+				fillEmptyPerColumn = new boolean[maxColumns];
+				for (int i = 0; i < maxColumns; i++)
+				{
+					fillEmptyPerColumn[i] = false; // por defecto, todas desmarcadas
+				}
+			}
+
+			// === PREFILA CON CHECKBOXES ===
+			TableItem prefItem = new TableItem (previewTable, SWT.NONE);
+			prefItem.setText (0, ""); // primera columna vacía o "Cfg"
+
+			for (int c = 0; c < maxColumns; c++)
+			{
+				prefItem.setText (c + 1, fillEmptyPerColumn[c]? "☑" : "☐");
+			}
+
+			// prefila: toda en gris
+			if (nonDataColor != null)
+			{
+				for (int c = 0; c < previewTable.getColumnCount (); c++)
+				{
+					prefItem.setBackground (c, nonDataColor);
+				}
+			}
+		}
+		else
+		{
+			fillEmptyPerColumn = null;
+		}
+
+		// === RELLENAR FILAS DE DATOS ===
 		for (int r = 0; r < rows.size (); r++)
 		{
 			List <String> rowData = rows.get (r);
 			TableItem item = new TableItem (previewTable, SWT.NONE);
 
-			// columna 0 → número de fila Excel (1-based)
+			// Columna 0 → número de fila Excel (1-based)
 			item.setText (0, String.valueOf (r + 1));
 
 			for (int c = 0; c < rowData.size (); c++)
 			{
-				item.setText (c + 1, rowData.get (c)); // +1 por la columna de número de fila
+				item.setText (c + 1, rowData.get (c)); // +1 por columna "#"
+			}
+		}
+
+		// Primera columna en gris (no forma parte de los datos)
+		if (nonDataColor != null)
+		{
+			for (TableItem item : previewTable.getItems ())
+			{
+				item.setBackground (0, nonDataColor);
 			}
 		}
 
@@ -457,24 +532,56 @@ public class Step2PreviewPage implements WizardPage
 			return;
 		}
 
-		// Resetear colores
-		for (TableItem item : previewTable.getItems ())
-		{
-			for (int c = 0; c < previewTable.getColumnCount (); c++)
-			{
-				item.setBackground (c, null);
-			}
-		}
+		int itemCount = previewTable.getItemCount ();
+		int columnCount = previewTable.getColumnCount ();
 
-		int headerIndex = getHeaderRowIndexInternal ();
-		if (headerIndex < 0 || headerIndex >= previewTable.getItemCount ())
+		if (itemCount == 0 || columnCount == 0)
 		{
 			return;
 		}
 
-		// Pintamos TODA la fila header con el color de highlight
-		TableItem headerItem = previewTable.getItem (headerIndex);
-		for (int c = 0; c < previewTable.getColumnCount (); c++)
+		// Resetear colores:
+		// - Fila 0 (prefila): todas las columnas en gris
+		// - Resto de filas: col 0 gris, resto sin color
+		for (int i = 0; i < itemCount; i++)
+		{
+			TableItem item = previewTable.getItem (i);
+			if (i == 0)
+			{
+				// prefila
+				for (int c = 0; c < columnCount; c++)
+				{
+					item.setBackground (c, nonDataColor);
+				}
+			}
+			else
+			{
+				// datos
+				item.setBackground (0, nonDataColor);
+				for (int c = 1; c < columnCount; c++)
+				{
+					item.setBackground (c, null);
+				}
+			}
+		}
+
+		// Calcular índice de la fila de cabecera en la tabla:
+		// Excel 1-based → índice de datos 0-based → en la tabla se desplaza +1 por la prefila
+		int headerIndexExcelZeroBased = getHeaderRowIndexInternal ();
+		if (headerIndexExcelZeroBased < 0)
+		{
+			return;
+		}
+
+		int tableRowIndex = headerIndexExcelZeroBased + 1; // +1 por la prefila
+		if (tableRowIndex < 1 || tableRowIndex >= itemCount)
+		{
+			return;
+		}
+
+		// Pintamos la cabecera de datos en amarillo, SOLO columnas de datos (>=1)
+		TableItem headerItem = previewTable.getItem (tableRowIndex);
+		for (int c = 1; c < columnCount; c++)
 		{
 			headerItem.setBackground (c, highlightColor);
 		}
@@ -580,13 +687,22 @@ public class Step2PreviewPage implements WizardPage
 			return false;
 		}
 
+		List <Boolean> fillColumnList = new ArrayList <> ();
+		if (fillEmptyPerColumn != null)
+		{
+			for (boolean b : fillEmptyPerColumn)
+			{
+				fillColumnList.add (b);
+			}
+		}
+
 		// Guardar en configuración común
 		config.setHeaderRow (headerRow);
 		config.setDataStartRow (dataStartRow);
 		config.setAutoIncrement (autoIncrementCheckbox.getSelection ());
-		config.setFillEmptyCells (fillEmptyCheckbox.getSelection ());
 		config.setSheetNames (new ArrayList <> (sheetNames));
 		config.setTableName (tableName);
+		config.setFillEmptyColumns (fillColumnList);
 
 		return true;
 	}
@@ -637,11 +753,6 @@ public class Step2PreviewPage implements WizardPage
 		return autoIncrementCheckbox.getSelection ();
 	}
 
-	public boolean isFillEmptyEnabled ()
-	{
-		return fillEmptyCheckbox.getSelection ();
-	}
-
 	public File getSelectedFile ()
 	{
 		return selectedFile;
@@ -667,4 +778,22 @@ public class Step2PreviewPage implements WizardPage
 		}
 		return sb.toString ();
 	}
+
+	private void toggleFillEmptyForColumn (int columnIndex)
+	{
+		if (fillEmptyPerColumn == null || columnIndex < 0 || columnIndex >= fillEmptyPerColumn.length)
+		{
+			return;
+		}
+
+		fillEmptyPerColumn[columnIndex] = !fillEmptyPerColumn[columnIndex];
+
+		// Actualizamos texto de la "prefila"
+		if (previewTable != null && !previewTable.isDisposed () && previewTable.getItemCount () > 0)
+		{
+			TableItem prefItem = previewTable.getItem (0);
+			prefItem.setText (columnIndex + 1, fillEmptyPerColumn[columnIndex]? "☑" : "☐");
+		}
+	}
+
 }
