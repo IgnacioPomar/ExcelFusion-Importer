@@ -1,4 +1,3 @@
-
 package es.ipb.excelfusion.ui.wizard;
 
 import java.io.File;
@@ -228,10 +227,7 @@ public class Step2PreviewPage implements WizardPage
 	@Override
 	public void onEnter ()
 	{
-		if (selectedFile == null)
-		{
-			initializeFromStep1 ();
-		}
+		initializeFromStep1 (); // Always reload the file
 
 		// Rellenar nombre de tabla desde config si existiera
 		if (tableNameText != null && !tableNameText.isDisposed ())
