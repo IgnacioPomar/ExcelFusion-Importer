@@ -19,6 +19,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -332,15 +333,31 @@ public class ImportExecutor
 	private void importSheetData (Sheet sheet, DataFormatter formatter, PreparedStatement ps) throws SQLException
 	{
 
-		Integer headerRow = config.getHeaderRow (); // 1-based or null
+		// Integer headerRow = config.getHeaderRow (); // 1-based or null
 		Integer dataStartRow = config.getDataStartRow (); // 1-based
-		boolean fillEmpty = config.isFillEmptyCells ();
 
-		int headerRowIndex = (headerRow != null && headerRow > 0)? (headerRow - 1) : -1;
+		// int headerRowIndex = (headerRow != null && headerRow > 0)? (headerRow - 1) : -1;
 		int dataStartIndex = (dataStartRow != null? dataStartRow - 1 : 0);
 
 		int lastRow = sheet.getLastRowNum ();
 		int columnCount = config.getColumns ().size ();
+
+		// per-column fillEmptyCells
+
+		boolean[] fillEmptyByColumn = new boolean[columnCount];
+		{
+			List <Boolean> fillEmptyColumnsCfg = config.getFillEmptyColumns ();
+			for (int c = 0; c < columnCount; c++)
+			{
+				boolean fill = false;
+				if (fillEmptyColumnsCfg != null && c < fillEmptyColumnsCfg.size ())
+				{
+					Boolean b = fillEmptyColumnsCfg.get (c);
+					fill = (b != null && b.booleanValue ());
+				}
+				fillEmptyByColumn[c] = fill;
+			}
+		}
 
 		String[] previousRowValues = new String[columnCount];
 
@@ -365,7 +382,7 @@ public class ImportExecutor
 					value = formatter.formatCellValue (cell);
 				}
 
-				if ((value == null || value.trim ().isEmpty ()) && fillEmpty)
+				if ((value == null || value.trim ().isEmpty ()) && fillEmptyByColumn[c])
 				{
 					if (previousRowValues[c] != null)
 					{

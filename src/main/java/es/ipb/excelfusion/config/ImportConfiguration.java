@@ -224,4 +224,9 @@ public class ImportConfiguration
 		this.fillEmptyColumns = fillColumnList;
 
 	}
+
+	public List <Boolean> getFillEmptyColumns ()
+	{
+		return fillEmptyColumns;
+	}
 }
